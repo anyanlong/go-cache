@@ -39,10 +39,13 @@ type Cache struct {
 
 type cache struct {
 	defaultExpiration time.Duration
+	cleanupInterval   time.Duration
 	items             map[string]Item
 	mu                sync.RWMutex
 	onEvicted         func(string, interface{})
 	janitor           *janitor
+	itemsInitInterval time.Duration
+	itemsInitTiming   int64
 }
 
 // Add an item to the cache, replacing any existing item. If the duration is 0
@@ -947,6 +950,13 @@ func (c *cache) DeleteExpired() {
 	}
 }
 
+// Init items from the cache.
+func (c *cache) InitItems() {
+	c.mu.Lock()
+	c.items = map[string]Item{}
+	c.mu.Unlock()
+}
+
 // Sets an (optional) function that is called with the key and value when an
 // item is evicted from the cache. (Including when it is deleted manually, but
 // not when it is overwritten.) Set to nil to disable.
@@ -1061,7 +1071,31 @@ func (c *cache) ItemCount() int {
 	return n
 }
 
-// Delete all items from the cache.
+//
+func (c *cache) newTickerWithCI() *time.Ticker {
+	return time.NewTicker(c.cleanupInterval)
+}
+
+//
+func (c *cache) newTimerWithII() *time.Timer {
+	if c.itemsInitTiming > 0 {
+		timeNow := time.Now()
+		timeStr := timeNow.Format("2006-01-02")
+		fmt.Println("timeStr:", timeStr)
+		t, _ := time.Parse("2006-01-02", timeStr)
+		unix := t.Unix()
+		if unix < c.itemsInitTiming {
+			return time.NewTimer(time.Duration(c.itemsInitTiming-unix) * time.Second)
+		}
+		return time.NewTimer(time.Duration(86400+c.itemsInitTiming-unix) * time.Second)
+
+	}
+	if c.itemsInitInterval > 0 {
+		return time.NewTimer(c.itemsInitInterval)
+	}
+	return &time.Timer{C: make(chan time.Time, 1)}
+}
+
 func (c *cache) Flush() {
 	c.mu.Lock()
 	c.items = map[string]Item{}
@@ -1069,18 +1103,29 @@ func (c *cache) Flush() {
 }
 
 type janitor struct {
-	Interval time.Duration
-	stop     chan bool
+	stop chan bool
 }
 
 func (j *janitor) Run(c *cache) {
-	ticker := time.NewTicker(j.Interval)
+	cleanTicker := c.newTickerWithCI()
+	initTimer := c.newTimerWithII()
+
 	for {
 		select {
-		case <-ticker.C:
+		case <-cleanTicker.C:
 			c.DeleteExpired()
+
+		case <-initTimer.C:
+			cleanTicker.Stop()
+			c.InitItems()
+			// 新建初始化map定时器
+			initTimer = c.newTimerWithII()
+			// 新建清理key定时器
+			cleanTicker = c.newTickerWithCI()
+
 		case <-j.stop:
-			ticker.Stop()
+			cleanTicker.Stop()
+			initTimer.Stop()
 			return
 		}
 	}
@@ -1090,72 +1135,107 @@ func stopJanitor(c *Cache) {
 	c.janitor.stop <- true
 }
 
-func runJanitor(c *cache, ci time.Duration) {
+func runJanitor(c *cache) {
 	j := &janitor{
-		Interval: ci,
-		stop:     make(chan bool),
+		stop: make(chan bool),
 	}
 	c.janitor = j
 	go j.Run(c)
 }
 
-func newCache(de time.Duration, m map[string]Item) *cache {
-	if de == 0 {
-		de = -1
-	}
-	c := &cache{
-		defaultExpiration: de,
-		items:             m,
-	}
-	return c
-}
-
-func newCacheWithJanitor(de time.Duration, ci time.Duration, m map[string]Item) *Cache {
-	c := newCache(de, m)
+func withJanitor(C *Cache) {
 	// This trick ensures that the janitor goroutine (which--granted it
 	// was enabled--is running DeleteExpired on c forever) does not keep
 	// the returned C object from being garbage collected. When it is
 	// garbage collected, the finalizer stops the janitor goroutine, after
 	// which c can be collected.
-	C := &Cache{c}
-	if ci > 0 {
-		runJanitor(c, ci)
+
+	if C.cache.cleanupInterval > 0 || C.cache.itemsInitTiming >= 0 || C.cache.itemsInitInterval > 0 {
+		runJanitor(C.cache)
 		runtime.SetFinalizer(C, stopJanitor)
 	}
+	return
+}
+
+func NewCache(opt ...FuncOpt) *Cache {
+	c := &cache{}
+	for _, fn := range opt {
+		fn(c)
+	}
+
+	if c.defaultExpiration == 0 {
+		c.defaultExpiration = -1
+	}
+	if c.itemsInitTiming < 0 || c.itemsInitTiming >= 86400 {
+		c.itemsInitTiming = -1
+	}
+
+	if c.itemsInitInterval == 0 {
+		c.itemsInitInterval = -1
+	}
+
+	C := &Cache{c}
+
+	withJanitor(C)
+
 	return C
 }
 
-// Return a new cache with a given default expiration duration and cleanup
-// interval. If the expiration duration is less than one (or NoExpiration),
-// the items in the cache never expire (by default), and must be deleted
-// manually. If the cleanup interval is less than one, expired items are not
-// deleted from the cache before calling c.DeleteExpired().
-func New(defaultExpiration, cleanupInterval time.Duration) *Cache {
-	items := make(map[string]Item)
-	return newCacheWithJanitor(defaultExpiration, cleanupInterval, items)
+type FuncOpt func(c *cache)
+
+// 设置初始化map
+func WithItems(interval time.Duration) FuncOpt {
+	return func(c *cache) {
+		c.defaultExpiration = interval
+	}
 }
 
-// Return a new cache with a given default expiration duration and cleanup
-// interval. If the expiration duration is less than one (or NoExpiration),
-// the items in the cache never expire (by default), and must be deleted
-// manually. If the cleanup interval is less than one, expired items are not
-// deleted from the cache before calling c.DeleteExpired().
-//
-// NewFrom() also accepts an items map which will serve as the underlying map
-// for the cache. This is useful for starting from a deserialized cache
-// (serialized using e.g. gob.Encode() on c.Items()), or passing in e.g.
-// make(map[string]Item, 500) to improve startup performance when the cache
-// is expected to reach a certain minimum size.
-//
-// Only the cache's methods synchronize access to this map, so it is not
-// recommended to keep any references to the map around after creating a cache.
-// If need be, the map can be accessed at a later point using c.Items() (subject
-// to the same caveat.)
-//
-// Note regarding serialization: When using e.g. gob, make sure to
-// gob.Register() the individual types stored in the cache before encoding a
-// map retrieved with c.Items(), and to register those same types before
-// decoding a blob containing an items map.
-func NewFrom(defaultExpiration, cleanupInterval time.Duration, items map[string]Item) *Cache {
-	return newCacheWithJanitor(defaultExpiration, cleanupInterval, items)
+// 设置key默认过期时间
+func WithDefaultExpiration(interval time.Duration) FuncOpt {
+	return func(c *cache) {
+		c.defaultExpiration = interval
+	}
 }
+
+// 设置key过期清理时间间隔
+func WithCleanupInterval(interval time.Duration) FuncOpt {
+	return func(c *cache) {
+		c.cleanupInterval = interval
+	}
+}
+
+// 设置map内存清理(全部初始化) 时间间隔
+func WithItemsInitInterval(interval time.Duration) FuncOpt {
+	return func(c *cache) {
+		c.itemsInitInterval = interval
+	}
+}
+
+// 设置map内存清理(全部初始化) 时刻的时间戳(一日中的某个时刻以秒为单位 0-86399)
+func WithItemsInitTiming(timing int64) FuncOpt {
+	return func(c *cache) {
+		c.itemsInitTiming = timing
+	}
+}
+
+//Return a new cache with a given default expiration duration and cleanup
+//interval. If the expiration duration is less than one (or NoExpiration),
+//the items in the cache never expire (by default), and must be deleted
+//manually. If the cleanup interval is less than one, expired items are not
+//deleted from the cache before calling c.DeleteExpired().
+//
+//NewFrom() also accepts an items map which will serve as the underlying map
+//for the cache. This is useful for starting from a deserialized cache
+//(serialized using e.g. gob.Encode() on c.Items()), or passing in e.g.
+//make(map[string]Item, 500) to improve startup performance when the cache
+//is expected to reach a certain minimum size.
+//
+//Only the cache's methods synchronize access to this map, so it is not
+//recommended to keep any references to the map around after creating a cache.
+//If need be, the map can be accessed at a later point using c.Items() (subject
+//to the same caveat.)
+//
+//Note regarding serialization: When using e.g. gob, make sure to
+//gob.Register() the individual types stored in the cache before encoding a
+//map retrieved with c.Items(), and to register those same types before
+//decoding a blob containing an items map.
