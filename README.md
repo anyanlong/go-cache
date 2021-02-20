@@ -1,21 +1,14 @@
 # go-cache
 
-go-cache is an in-memory key:value store/cache similar to memcached that is
-suitable for applications running on a single machine. Its major advantage is
-that, being essentially a thread-safe `map[string]interface{}` with expiration
-times, it doesn't need to serialize or transmit its contents over the network.
-
-Any object can be stored, for a given duration or forever, and the cache can be
-safely used by multiple goroutines.
-
-Although go-cache isn't meant to be used as a persistent datastore, the entire
-cache can be saved to and loaded from a file (using `c.Items()` to retrieve the
-items map to serialize, and `NewFrom()` to create a cache from a deserialized
-one) to recover from downtime quickly. (See the docs for `NewFrom()` for caveats.)
+在 `github.com/patrickmn/go-cache` 的基础上进行了一些功能添加
+* 1. 可注册key删除时，执行后置函数
+* 2. 可注册cache flush时，执行的后置函数
+* 3. 添加指定时间间隔和指定时刻flush cache的功能 (为了服务长时间运行不出现oom)
+* 4. 将初始化方式改为option函数初始化方式
 
 ### Installation
 
-`go get github.com/patrickmn/go-cache`
+`go get github.com/anyanlong/go-cache`
 
 ### Usage
 
