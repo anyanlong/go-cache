@@ -1158,7 +1158,7 @@ func withJanitor(C *Cache) {
 }
 
 func NewCache(opt ...FuncOpt) *Cache {
-	c := &cache{}
+	c := &cache{items: map[string]Item{}}
 	for _, fn := range opt {
 		fn(c)
 	}
@@ -1184,9 +1184,12 @@ func NewCache(opt ...FuncOpt) *Cache {
 type FuncOpt func(c *cache)
 
 // 设置初始化map
-func WithItems(interval time.Duration) FuncOpt {
+func WithItems(items map[string]Item) FuncOpt {
 	return func(c *cache) {
-		c.defaultExpiration = interval
+		if items == nil {
+			items = map[string]Item{}
+		}
+		c.items = items
 	}
 }
 
