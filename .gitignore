@@ -1,0 +1,7 @@
+main.log
+vendor/
+.DS_Store
+access.log
+./tmp
+.idea/
+.dockerignore
