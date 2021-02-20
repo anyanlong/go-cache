@@ -43,6 +43,7 @@ type cache struct {
 	items             map[string]Item
 	mu                sync.RWMutex
 	onEvicted         func(string, interface{})
+	onFlush           func(int)
 	janitor           *janitor
 	itemsInitInterval time.Duration
 	itemsInitTiming   int64
@@ -950,13 +951,6 @@ func (c *cache) DeleteExpired() {
 	}
 }
 
-// Init items from the cache.
-func (c *cache) InitItems() {
-	c.mu.Lock()
-	c.items = map[string]Item{}
-	c.mu.Unlock()
-}
-
 // Sets an (optional) function that is called with the key and value when an
 // item is evicted from the cache. (Including when it is deleted manually, but
 // not when it is overwritten.) Set to nil to disable.
@@ -1098,8 +1092,12 @@ func (c *cache) newTimerWithII() *time.Timer {
 
 func (c *cache) Flush() {
 	c.mu.Lock()
+	mapLen := len(c.items)
 	c.items = map[string]Item{}
 	c.mu.Unlock()
+	if c.onFlush != nil {
+		c.onFlush(mapLen)
+	}
 }
 
 type janitor struct {
@@ -1117,7 +1115,7 @@ func (j *janitor) Run(c *cache) {
 
 		case <-initTimer.C:
 			cleanTicker.Stop()
-			c.InitItems()
+			c.Flush()
 			// 新建初始化map定时器
 			initTimer = c.newTimerWithII()
 			// 新建清理key定时器
@@ -1190,6 +1188,20 @@ func WithItems(items map[string]Item) FuncOpt {
 			items = map[string]Item{}
 		}
 		c.items = items
+	}
+}
+
+// 设置删除map key时调用的函数
+func WithOnEvicted(f func(string, interface{})) FuncOpt {
+	return func(c *cache) {
+		c.onEvicted = f
+	}
+}
+
+// 设置清空map时调用的函数
+func WithOnFlush(f func(int)) FuncOpt {
+	return func(c *cache) {
+		c.onFlush = f
 	}
 }
 
