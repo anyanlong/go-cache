@@ -22,7 +22,7 @@ one) to recover from downtime quickly. (See the docs for `NewFrom()` for caveats
 ```go
 import (
 	"fmt"
-	"github.com/patrickmn/go-cache"
+	"github.com/anyanlong/go-cache"
 	"time"
 )
 
