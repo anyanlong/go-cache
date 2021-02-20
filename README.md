@@ -27,9 +27,19 @@ import (
 )
 
 func main() {
-	// Create a cache with a default expiration time of 5 minutes, and which
-	// purges expired items every 10 minutes
-	c := cache.New(5*time.Minute, 10*time.Minute)
+	// 以下初始化效果为
+	c := cache.NewCache(
+            cache.WithDefaultExpiration(time.Minute), // key默认过期时间为1分钟
+            cache.WithCleanupInterval(5*time.Minute), // key全局清理时间为5分钟
+            cache.WithItemsInitInterval(5*time.Minute), // cache清空时间间隔为5分钟
+            gocache.WithItemsInitTiming(int64(3*3600)), // cache清空时刻为每日凌晨3点
+            cache.WithOnFlush(func(cacheSize int) { // 设置cache清空时 执行的函数
+                log.WithField("cacheSize", cacheSize).Infoln("go - cache flush!!") 
+            }),
+            cache.WithOnEvicted(func(k string, v interface{}) { // 设置key被删除时 执行的函数
+                log.WithField("k", k).WithField("v", v).Infoln("go - key deleted!!") 
+            }),
+    )
 
 	// Set the value of the key "foo" to "bar", with the default expiration time
 	c.Set("foo", "bar", cache.DefaultExpiration)
