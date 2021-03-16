@@ -1065,23 +1065,23 @@ func (c *cache) ItemCount() int {
 	return n
 }
 
-//
+// 新建 删除过期缓存timer
 func (c *cache) newTickerWithCI() *time.Ticker {
 	return time.NewTicker(c.cleanupInterval)
 }
 
-//
+// 新建 清空缓存timer
 func (c *cache) newTimerWithII() *time.Timer {
 	if c.itemsInitTiming > 0 {
 		timeNow := time.Now()
 		timeStr := timeNow.Format("2006-01-02")
 		fmt.Println("timeStr:", timeStr)
 		t, _ := time.Parse("2006-01-02", timeStr)
-		unix := t.Unix()
-		if unix < c.itemsInitTiming {
-			return time.NewTimer(time.Duration(c.itemsInitTiming-unix) * time.Second)
+		todayUnix := t.Unix() % 86400
+		if todayUnix < c.itemsInitTiming {
+			return time.NewTimer(time.Duration(c.itemsInitTiming-todayUnix) * time.Second)
 		}
-		return time.NewTimer(time.Duration(86400+c.itemsInitTiming-unix) * time.Second)
+		return time.NewTimer(time.Duration(86400+c.itemsInitTiming-todayUnix) * time.Second)
 
 	}
 	if c.itemsInitInterval > 0 {
@@ -1090,6 +1090,7 @@ func (c *cache) newTimerWithII() *time.Timer {
 	return &time.Timer{C: make(chan time.Time, 1)}
 }
 
+// 清空缓存
 func (c *cache) Flush() {
 	c.mu.Lock()
 	mapLen := len(c.items)
