@@ -1076,7 +1076,7 @@ func (c *cache) newTimerWithII() *time.Timer {
 		timeNow := time.Now()
 		timeStr := timeNow.Format("2006-01-02")
 		fmt.Println("timeStr:", timeStr)
-		t, _ := time.Parse("2006-01-02", timeStr)
+		t, _ := time.ParseInLocation("2006-01-02", timeStr, time.Local)
 		todayUnix := timeNow.Unix() - t.Unix()
 		if todayUnix < c.itemsInitTiming {
 			return time.NewTimer(time.Duration(c.itemsInitTiming-todayUnix) * time.Second)
