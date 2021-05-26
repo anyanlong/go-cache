@@ -279,6 +279,27 @@ func (c *cache) IncrementInt(k string, n int) (int, error) {
 	return nv, nil
 }
 
+func (c *cache) AtomIncrementInt(k string, n int, d time.Duration) (int, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(int)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an int", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
 // Increment an item of type int8 by n. Returns an error if the item's value is
 // not an int8, or if it was not found. If there is no error, the incremented
 // value is returned.
@@ -296,6 +317,27 @@ func (c *cache) IncrementInt8(k string, n int8) (int8, error) {
 	}
 	nv := rv + n
 	v.Object = nv
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
+func (c *cache) AtomIncrementInt8(k string, n int8, d time.Duration) (int8, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(int8)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an int8", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -323,6 +365,27 @@ func (c *cache) IncrementInt16(k string, n int16) (int16, error) {
 	return nv, nil
 }
 
+func (c *cache) AtomIncrementInt16(k string, n int16, d time.Duration) (int16, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(int16)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an int16", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
 // Increment an item of type int32 by n. Returns an error if the item's value is
 // not an int32, or if it was not found. If there is no error, the incremented
 // value is returned.
@@ -340,6 +403,27 @@ func (c *cache) IncrementInt32(k string, n int32) (int32, error) {
 	}
 	nv := rv + n
 	v.Object = nv
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
+func (c *cache) AtomIncrementInt32(k string, n int32, d time.Duration) (int32, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(int32)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an int32", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -367,6 +451,27 @@ func (c *cache) IncrementInt64(k string, n int64) (int64, error) {
 	return nv, nil
 }
 
+func (c *cache) AtomIncrementInt64(k string, n int64, d time.Duration) (int64, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(int64)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an int64", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
 // Increment an item of type uint by n. Returns an error if the item's value is
 // not an uint, or if it was not found. If there is no error, the incremented
 // value is returned.
@@ -384,6 +489,27 @@ func (c *cache) IncrementUint(k string, n uint) (uint, error) {
 	}
 	nv := rv + n
 	v.Object = nv
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
+func (c *cache) AtomIncrementUint(k string, n uint, d time.Duration) (uint, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(uint)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an uint", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -433,6 +559,27 @@ func (c *cache) IncrementUint8(k string, n uint8) (uint8, error) {
 	return nv, nil
 }
 
+func (c *cache) AtomIncrementUint8(k string, n uint8, d time.Duration) (uint8, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(uint8)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an uint8", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
 // Increment an item of type uint16 by n. Returns an error if the item's value
 // is not an uint16, or if it was not found. If there is no error, the
 // incremented value is returned.
@@ -450,6 +597,27 @@ func (c *cache) IncrementUint16(k string, n uint16) (uint16, error) {
 	}
 	nv := rv + n
 	v.Object = nv
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
+func (c *cache) AtomIncrementUint16(k string, n uint16, d time.Duration) (uint16, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(uint16)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an uint16", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -477,6 +645,27 @@ func (c *cache) IncrementUint32(k string, n uint32) (uint32, error) {
 	return nv, nil
 }
 
+func (c *cache) AtomIncrementUint32(k string, n uint32, d time.Duration) (uint32, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(uint32)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an uint32", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
 // Increment an item of type uint64 by n. Returns an error if the item's value
 // is not an uint64, or if it was not found. If there is no error, the
 // incremented value is returned.
@@ -494,6 +683,27 @@ func (c *cache) IncrementUint64(k string, n uint64) (uint64, error) {
 	}
 	nv := rv + n
 	v.Object = nv
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
+func (c *cache) AtomIncrementUint64(k string, n uint64, d time.Duration) (uint64, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(uint64)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an uint64", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -521,6 +731,27 @@ func (c *cache) IncrementFloat32(k string, n float32) (float32, error) {
 	return nv, nil
 }
 
+func (c *cache) AtomIncrementFloat32(k string, n float32, d time.Duration) (float32, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(float32)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an float32", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
 // Increment an item of type float64 by n. Returns an error if the item's value
 // is not an float64, or if it was not found. If there is no error, the
 // incremented value is returned.
@@ -538,6 +769,30 @@ func (c *cache) IncrementFloat64(k string, n float64) (float64, error) {
 	}
 	nv := rv + n
 	v.Object = nv
+	c.items[k] = v
+	c.mu.Unlock()
+	return nv, nil
+}
+
+// Increment an item of type float64 by n. set increment value if the item's value
+// is not an float64, or if it was not found. If there is no error, the
+// incremented value is returned.
+func (c *cache) AtomIncrementFloat64(k string, n float64, d time.Duration) (float64, error) {
+	c.mu.Lock()
+	v, found := c.items[k]
+	if !found || v.Expired() {
+		c.set(k, n, d)
+		c.mu.Unlock()
+		return n, nil
+	}
+	rv, ok := v.Object.(float64)
+	if !ok {
+		c.mu.Unlock()
+		return 0, fmt.Errorf("The value for %s is not an float64", k)
+	}
+	nv := rv + n
+	v.Object = nv
+	v.Expiration = time.Now().Add(d).UnixNano()
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
