@@ -72,17 +72,20 @@ func (c *cache) Set(k string, x interface{}, d time.Duration) {
 }
 
 func (c *cache) set(k string, x interface{}, d time.Duration) {
-	var e int64
+	c.items[k] = Item{
+		Object:     x,
+		Expiration: c.getExpiration(d),
+	}
+}
+
+func (c *cache) getExpiration(d time.Duration) (e int64) {
 	if d == DefaultExpiration {
 		d = c.defaultExpiration
 	}
 	if d > 0 {
 		e = time.Now().Add(d).UnixNano()
 	}
-	c.items[k] = Item{
-		Object:     x,
-		Expiration: e,
-	}
+	return e
 }
 
 // Add an item to the cache, replacing any existing item, using the default
@@ -294,7 +297,7 @@ func (c *cache) AtomIncrementInt(k string, n int, d time.Duration) (int, error) 
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -337,7 +340,7 @@ func (c *cache) AtomIncrementInt8(k string, n int8, d time.Duration) (int8, erro
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -380,7 +383,7 @@ func (c *cache) AtomIncrementInt16(k string, n int16, d time.Duration) (int16, e
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -423,7 +426,7 @@ func (c *cache) AtomIncrementInt32(k string, n int32, d time.Duration) (int32, e
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -466,7 +469,7 @@ func (c *cache) AtomIncrementInt64(k string, n int64, d time.Duration) (int64, e
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -509,7 +512,7 @@ func (c *cache) AtomIncrementUint(k string, n uint, d time.Duration) (uint, erro
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -574,7 +577,7 @@ func (c *cache) AtomIncrementUint8(k string, n uint8, d time.Duration) (uint8, e
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -617,7 +620,7 @@ func (c *cache) AtomIncrementUint16(k string, n uint16, d time.Duration) (uint16
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -660,7 +663,7 @@ func (c *cache) AtomIncrementUint32(k string, n uint32, d time.Duration) (uint32
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -703,7 +706,7 @@ func (c *cache) AtomIncrementUint64(k string, n uint64, d time.Duration) (uint64
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -746,7 +749,7 @@ func (c *cache) AtomIncrementFloat32(k string, n float32, d time.Duration) (floa
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
@@ -792,7 +795,7 @@ func (c *cache) AtomIncrementFloat64(k string, n float64, d time.Duration) (floa
 	}
 	nv := rv + n
 	v.Object = nv
-	v.Expiration = time.Now().Add(d).UnixNano()
+	v.Expiration = c.getExpiration(d)
 	c.items[k] = v
 	c.mu.Unlock()
 	return nv, nil
